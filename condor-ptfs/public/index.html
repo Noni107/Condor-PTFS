@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Condor PTFS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --yellow:#FFCC00; --yellow-ink:#332900;
+  --navy:#0B2A4A; --navy-2:#123A63; --navy-3:#1E4E80;
+  --bg:#FFFFFF; --bg-soft:#F3F6FA; --surface:#FFFFFF;
+  --ink:#0E1524; --ink-soft:#5A6478; --line:#E3E8F0;
+  --ok:#1E9E5A; --ok-bg:#E7F8EE;
+  --warn:#9A6B00; --warn-bg:#FFF3D6;
+  --bad:#C6423C; --bad-bg:#FCEBEA;
+  --focus:#1957D2;
+  --r-lg:22px; --r-md:14px; --r-sm:9px;
+  --gutter:clamp(18px,3vw,32px);
+  --display:"Space Grotesk",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){ --bg:#0F1720; --bg-soft:#141F2B; --surface:#17222E; --ink:#EDF1F6; --ink-soft:#93A0B4; --line:#26313F; --ok-bg:#0F2A1E; --warn-bg:#2B2308; --bad-bg:#2E1616; }
+}
+:root[data-theme="dark"]{ --bg:#0F1720; --bg-soft:#141F2B; --surface:#17222E; --ink:#EDF1F6; --ink-soft:#93A0B4; --line:#26313F; --ok-bg:#0F2A1E; --warn-bg:#2B2308; --bad-bg:#2E1616; }
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:20px}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1rem/1.55 var(--body);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--display);margin:0}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.hidden{display:none!important}
+[hidden]{display:none!important}
+
+/* ---------- LOGIN ---------- */
+#login{min-height:100vh;display:grid;place-items:center;background:var(--navy);color:#fff;padding:24px}
+.login-card{width:min(440px,100%);background:var(--surface);color:var(--ink);border-radius:var(--r-lg);padding:clamp(28px,5vw,44px);text-align:center;box-shadow:0 30px 60px rgba(0,0,0,.35)}
+.lg-mark{width:64px;height:64px;margin:0 auto 18px;border-radius:16px;background:var(--yellow);color:var(--yellow-ink);display:grid;place-items:center}
+.lg-mark svg{width:38px;height:38px;fill:currentColor}
+.login-card h1{font-size:1.9rem;letter-spacing:-.02em;margin-bottom:6px}
+.login-card .sub{color:var(--ink-soft);margin-bottom:28px}
+.dc-btn{width:100%;min-height:52px;border-radius:999px;border:0;background:#5865F2;color:#fff;font-weight:600;font-size:1.05rem;display:inline-flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:filter .2s}
+.dc-btn:hover{filter:brightness(1.08)}
+.staff-btn{margin-top:12px;width:100%;min-height:44px;border-radius:999px;border:2px solid var(--line);background:transparent;color:var(--ink-soft);font-weight:600;cursor:pointer}
+.staff-btn:hover{border-color:var(--navy)}
+.login-note{margin-top:22px;font-size:.85rem;color:var(--ink-soft);line-height:1.5}
+
+/* ---------- APP SHELL ---------- */
+#app{display:none;min-height:100vh;grid-template-columns:260px 1fr}
+#app.on{display:grid}
+.sidebar{background:var(--navy);color:#EAF0FB;padding:20px 16px;display:flex;flex-direction:column;gap:18px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:6px 8px 14px;border-bottom:1px solid rgba(255,255,255,.12)}
+.sb-mark{width:34px;height:34px;border-radius:9px;background:var(--yellow);color:var(--yellow-ink);display:grid;place-items:center;flex:none}
+.sb-mark svg{width:20px;height:20px;fill:currentColor}
+.sb-brand b{font-family:var(--display);font-size:1.1rem;letter-spacing:-.01em}
+.sb-brand span{display:block;font-size:.72rem;color:#A9B8D6}
+.sb-nav{display:flex;flex-direction:column;gap:3px}
+.sb-link{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:var(--r-sm);color:#C9D5EC;text-decoration:none;font-weight:500;font-size:.94rem;border:0;background:transparent;width:100%;text-align:left;cursor:pointer}
+.sb-link svg{width:19px;height:19px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7}
+.sb-link:hover{background:rgba(255,255,255,.08);color:#fff}
+.sb-link[aria-current="page"]{background:var(--yellow);color:var(--yellow-ink);font-weight:600}
+.sb-link[aria-current="page"] svg{stroke:var(--yellow-ink)}
+.sb-sep{margin:8px 4px 2px;font-size:.68rem;letter-spacing:.04em;color:#7C8CAE}
+.sb-foot{margin-top:auto;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;gap:10px}
+.sb-user{display:flex;align-items:center;gap:10px;padding:8px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--yellow);color:var(--yellow-ink);display:grid;place-items:center;font-family:var(--display);font-weight:700;flex:none}
+.sb-user b{display:block;font-size:.9rem}
+.sb-user span{display:block;font-size:.75rem;color:#A9B8D6}
+.sb-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;font-size:.78rem;color:#A9B8D6}
+.switch{position:relative;width:38px;height:22px;border-radius:999px;background:rgba(255,255,255,.2);border:0;cursor:pointer;flex:none}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .2s}
+.switch[aria-checked="true"]{background:var(--yellow)}
+.switch[aria-checked="true"]::after{transform:translateX(16px)}
+.sb-logout{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);color:#C9D5EC;background:transparent;border:0;font-weight:500;cursor:pointer;text-align:left}
+.sb-logout:hover{background:rgba(255,255,255,.08);color:#fff}
+
+.menu-btn{display:none;position:fixed;top:14px;left:14px;z-index:40;width:44px;height:44px;border-radius:12px;border:0;background:var(--navy);color:#fff;cursor:pointer}
+.scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:29}
+@media (max-width:900px){
+  #app.on{display:block}
+  .sidebar{position:fixed;left:0;top:0;width:270px;transform:translateX(-100%);transition:transform .3s ease;z-index:30}
+  .sidebar.open{transform:translateX(0)}
+  .scrim.show{display:block}
+  .menu-btn{display:grid;place-items:center}
+  .content{padding-top:70px!important}
+}
+
+.content{padding:clamp(20px,4vw,40px) clamp(18px,4vw,44px) 80px;max-width:1180px}
+.topbar{margin-bottom:26px}
+.topbar h1{font-size:clamp(1.6rem,3vw,2.3rem);letter-spacing:-.02em}
+.topbar p{color:var(--ink-soft);margin-top:6px;max-width:60ch}
+
+.grid{display:grid;gap:18px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:900px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px}
+.stat{border-radius:var(--r-lg)}
+.stat b{display:block;font-family:var(--display);font-size:2rem;letter-spacing:-.02em}
+.stat span{color:var(--ink-soft);font-size:.85rem}
+
+.progress-track{height:10px;border-radius:999px;background:var(--bg-soft);overflow:hidden;margin-top:10px}
+.progress-fill{height:100%;background:var(--yellow);border-radius:999px;width:0;transition:width 1s cubic-bezier(.2,.7,.2,1)}
+
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:.78rem;font-weight:600}
+.badge-ok{background:var(--ok-bg);color:var(--ok)}
+.badge-warn{background:var(--warn-bg);color:var(--warn)}
+.badge-bad{background:var(--bad-bg);color:var(--bad)}
+.badge-lock{background:var(--bg-soft);color:var(--ink-soft)}
+.badge-rank{background:var(--navy);color:#fff}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border-radius:999px;border:2px solid transparent;font-weight:600;cursor:pointer;text-decoration:none;transition:background-color .2s,color .2s,border-color .2s}
+.btn-navy{background:var(--navy);color:#fff}
+.btn-navy:hover{background:var(--navy-2)}
+.btn-yellow{background:var(--yellow);color:var(--yellow-ink)}
+.btn-yellow:hover{filter:brightness(1.05)}
+.btn-line{background:transparent;border-color:var(--line);color:var(--ink)}
+.btn-line:hover{border-color:var(--navy)}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-bad{background:transparent;border-color:var(--bad);color:var(--bad)}
+.btn-bad:hover{background:var(--bad-bg)}
+.btn-sm{min-height:36px;padding:0 14px;font-size:.85rem}
+
+table.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:.78rem;color:var(--ink-soft);font-weight:600;padding:0 12px 10px;border-bottom:1px solid var(--line)}
+.tbl td{padding:14px 12px;border-bottom:1px solid var(--line);font-size:.94rem;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.cs{font-family:var(--display);font-weight:600}
+.scrollx{overflow-x:auto}
+
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field label{font-size:.85rem;font-weight:600}
+.field input,.field select,.field textarea{padding:11px 14px;border-radius:var(--r-sm);border:1.5px solid var(--line);background:var(--bg);width:100%}
+.field textarea{min-height:150px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--navy)}
+.hint{font-size:.8rem;color:var(--ink-soft)}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.tab{min-height:40px;padding:0 18px;border-radius:999px;border:2px solid var(--line);background:transparent;font-weight:600;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+.form-panel[hidden]{display:none}
+
+.plane-card{display:flex;flex-direction:column;gap:10px}
+.plane-card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.plane-card h3{font-size:1.4rem;letter-spacing:-.01em}
+.plane-card .maker{color:var(--ink-soft);font-size:.85rem}
+.spec-row{display:flex;justify-content:space-between;font-size:.88rem;padding:6px 0;border-top:1px solid var(--line)}
+.spec-row span:first-child{color:var(--ink-soft)}
+
+.train-card{display:flex;flex-direction:column;gap:8px}
+.train-card h3{font-size:1.15rem}
+.train-card p{color:var(--ink-soft);font-size:.9rem}
+
+.rank-row{display:flex;align-items:center;gap:16px;padding:16px 0;border-top:1px solid var(--line)}
+.rank-row:first-child{border-top:0}
+.rank-num{width:34px;height:34px;border-radius:50%;background:var(--bg-soft);display:grid;place-items:center;font-family:var(--display);font-weight:700;color:var(--ink-soft);flex:none}
+.rank-row.current .rank-num{background:var(--yellow);color:var(--yellow-ink)}
+.rank-row h4{font-size:1.05rem}
+.rank-row p{color:var(--ink-soft);font-size:.85rem;margin-top:2px}
+
+.ach{display:flex;gap:14px;align-items:flex-start}
+.ach-icon{width:46px;height:46px;border-radius:50%;background:var(--bg-soft);display:grid;place-items:center;flex:none}
+.ach.done .ach-icon{background:var(--yellow)}
+.ach-icon svg{width:22px;height:22px;stroke:var(--ink-soft);fill:none;stroke-width:1.7}
+.ach.done .ach-icon svg{stroke:var(--yellow-ink)}
+.ach h4{font-size:.98rem}
+.ach p{color:var(--ink-soft);font-size:.83rem;margin-top:2px}
+
+.news-item{padding:18px 0;border-top:1px solid var(--line)}
+.news-item:first-child{border-top:0}
+.news-item time{font-size:.8rem;color:var(--ink-soft)}
+.news-item h3{margin:4px 0 6px;font-size:1.2rem}
+
+.person{display:flex;align-items:center;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+.person:first-child{border-top:0}
+.person b{display:block}
+.person span{color:var(--ink-soft);font-size:.85rem}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.chip{min-height:38px;padding:0 16px;border-radius:999px;border:2px solid var(--line);background:transparent;font-weight:600;font-size:.86rem;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+.toast-wrap{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;flex-direction:column;gap:10px;max-width:340px}
+.toast{background:var(--navy);color:#fff;padding:14px 18px;border-radius:var(--r-md);box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:.9rem;animation:toastin .25s ease}
+@keyframes toastin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.demo-note{background:var(--bg-soft);border:1px dashed var(--line);border-radius:var(--r-md);padding:14px 16px;font-size:.85rem;color:var(--ink-soft);margin-bottom:22px}
+
+.page[hidden]{display:none}
+.enter{animation:enter .3s ease both}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<g id="ic-plane"><path d="M2 12h20M14 4l6 8-6 8M9 9l-3 3 3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="ic-home"><path d="M3 11l9-8 9 8M6 10v10h12V10" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="ic-gauge"><path d="M4 18a8 8 0 1116 0M12 18l4-6" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="ic-send"><path d="M4 12l16-8-6 16-3-6-7-2z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/></g>
+<g id="ic-list"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></g>
+<g id="ic-fleet"><path d="M3 16l8-4 3-9 3 9 4 2-4 1 1 4-4-2-4 2 1-4z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></g>
+<g id="ic-grad"><path d="M2 9l10-4 10 4-10 4-10-4z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5" stroke="currentColor" stroke-width="1.7" fill="none"/></g>
+<g id="ic-medal"><circle cx="12" cy="14" r="6" stroke="currentColor" stroke-width="1.7" fill="none"/><path d="M9 4l3 6 3-6" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/></g>
+<g id="ic-trophy"><path d="M7 4h10v4a5 5 0 01-10 0V4z" stroke="currentColor" stroke-width="1.7" fill="none"/><path d="M12 13v4M9 20h6M4 5H2v2a4 4 0 004 4M20 5h2v2a4 4 0 01-4 4" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round"/></g>
+<g id="ic-users"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7" fill="none"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M16 8.5a3 3 0 110 6M21 20c0-2.8-1.8-5-4.3-5.7" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round"/></g>
+<g id="ic-news"><path d="M4 4h13v16l-3-2-3 2-3-2-4 2V4z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/><path d="M9 8h5M9 11h5M17 4h3v13a2 2 0 01-2 2h-1" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></g>
+<g id="ic-shield"><path d="M12 3l8 3v6c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V6l8-3z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/></g>
+<g id="ic-out"><path d="M9 4H5v16h4M15 8l4 4-4 4M19 12H9" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+</defs>
+</svg>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-card">
+    <div class="lg-mark"><svg viewBox="0 0 24 24"><use href="#ic-plane"/></svg></div>
+    <h1>Condor PTFS</h1>
+    <p class="sub">Your journey starts here.</p>
+    <a class="dc-btn" id="btn-discord-login" href="/auth/discord/start" style="margin-top:22px;text-decoration:none">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M20.3 5.4A17.6 17.6 0 0015.7 4l-.3.6a13 13 0 013.9 1.6 15 15 0 00-14.6 0A13 13 0 015.7 4.6L5.4 4a17.6 17.6 0 00-4.6 1.4C-.6 10 -1.3 14.4.5 18.7a17 17 0 005.2 2.6l1-1.6a11 11 0 01-1.8-.9l.4-.3a12.6 12.6 0 0013.4 0l.4.3a11 11 0 01-1.8.9l1 1.6a17 17 0 005.2-2.6c1.9-4.9.8-9.2-2.2-13.3zM8.1 15.6c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.8 2.1-1.9 2.1zm7.8 0c-1 0-1.9-1-1.9-2.1s.8-2.1 1.9-2.1 1.9 1 1.9 2.1-.9 2.1-1.9 2.1z"/></svg>
+      Mit Discord anmelden
+    </a>
+    <p class="login-note" id="login-error" style="display:none;color:var(--bad)"></p>
+    <p class="login-note">Echter Discord-Login (OAuth2). Dein Rang wird automatisch mit deinen Discord-Rollen abgeglichen, sobald du auf unserem Server bist.</p>
+  </div>
+</div>
+
+<button class="menu-btn" id="menu-btn" aria-label="Menü öffnen" aria-expanded="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg></button>
+<div class="scrim" id="scrim"></div>
+
+<!-- APP -->
+<div id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <span class="sb-mark"><svg viewBox="0 0 24 24"><use href="#ic-plane"/></svg></span>
+      <span><b>Condor PTFS</b><span>Pilot Portal</span></span>
+    </div>
+    <nav class="sb-nav" id="sb-nav" aria-label="Hauptnavigation">
+      <button class="sb-link" data-route="home"><svg><use href="#ic-home"/></svg>Übersicht</button>
+      <button class="sb-link" data-route="dashboard"><svg><use href="#ic-gauge"/></svg>Dashboard</button>
+      <button class="sb-link" data-route="submit"><svg><use href="#ic-send"/></svg>Flug einreichen</button>
+      <button class="sb-link" data-route="flights"><svg><use href="#ic-list"/></svg>Meine Flüge</button>
+      <div class="sb-sep">AIRLINE</div>
+      <button class="sb-link" data-route="fleet"><svg><use href="#ic-fleet"/></svg>Flotte</button>
+      <button class="sb-link" data-route="trainings"><svg><use href="#ic-grad"/></svg>Trainings</button>
+      <button class="sb-link" data-route="ranks"><svg><use href="#ic-medal"/></svg>Ränge</button>
+      <button class="sb-link" data-route="achievements"><svg><use href="#ic-trophy"/></svg>Achievements</button>
+      <div class="sb-sep">COMMUNITY</div>
+      <button class="sb-link" data-route="community"><svg><use href="#ic-users"/></svg>Community</button>
+      <button class="sb-link" data-route="news"><svg><use href="#ic-news"/></svg>News</button>
+      <button class="sb-link" data-route="admin" id="nav-admin" hidden><svg><use href="#ic-shield"/></svg>Admin</button>
+    </nav>
+    <div class="sb-foot">
+      <button class="sb-link" id="btn-sync-roles" style="border:1px solid rgba(255,255,255,.15)">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4v5h5M20 20v-5h-5M4.5 15a8 8 0 0013.9 3M19.5 9a8 8 0 00-13.9-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Rollen synchronisieren
+      </button>
+      <div class="sb-user">
+        <span class="avatar" id="sb-avatar">?</span>
+        <span><b id="sb-username">–</b><span id="sb-rank">–</span></span>
+      </div>
+      <a class="sb-logout" id="btn-logout" href="/auth/logout"><svg><use href="#ic-out"/></svg>Abmelden</a>
+    </div>
+  </aside>
+
+  <div class="content">
+
+    <!-- HOME -->
+    <section class="page" data-page="home">
+      <div class="topbar">
+        <h1 id="home-greet">Willkommen zurück 👋</h1>
+        <p>Hier ist deine Airline auf einen Blick.</p>
+      </div>
+      <div class="grid g4" style="margin-bottom:26px">
+        <div class="card stat" style="border-left:4px solid var(--yellow)"><b id="stat-members">–</b><span>Mitglieder</span></div>
+        <div class="card stat" style="border-left:4px solid var(--yellow)"><b id="stat-flights">–</b><span>Absolvierte Flüge</span></div>
+        <div class="card stat" style="border-left:4px solid var(--yellow)"><b id="stat-aircraft">–</b><span>Verfügbare Flugzeuge</span></div>
+        <div class="card stat" style="border-left:4px solid var(--yellow)"><b id="stat-trainings">–</b><span>Absolvierte Trainings</span></div>
+      </div>
+      <div class="grid g2">
+        <div class="card">
+          <h3 style="margin-bottom:14px">Aktuelle News</h3>
+          <div id="home-news"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:14px">Community-Aktivität</h3>
+          <div id="home-activity"></div>
+        </div>
+      </div>
+      <div class="actions" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:24px">
+        <button class="btn btn-navy" data-route="submit"><svg viewBox="0 0 24 24" width="18" height="18"><use href="#ic-send"/></svg>Flug einreichen</button>
+        <button class="btn btn-line" data-route="fleet">Flotte ansehen</button>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section class="page" data-page="dashboard" hidden>
+      <div class="topbar">
+        <h1>Pilot-Dashboard</h1>
+        <p>Dein Fortschritt, deine Flüge, dein nächster Rang.</p>
+      </div>
+      <div class="card" id="roblox-card" hidden style="margin-bottom:20px;border-color:var(--yellow)">
+        <h3 style="margin-bottom:10px">Roblox-Username hinterlegen</h3>
+        <p class="hint" style="margin-bottom:12px">Damit dein Discord-Account deinem Roblox-Piloten zugeordnet werden kann.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <input id="roblox-input" placeholder="z. B. krithekh_disco" style="flex:1;min-width:200px;padding:11px 14px;border-radius:9px;border:1.5px solid var(--line);background:var(--bg)">
+          <button class="btn btn-navy" id="btn-save-roblox">Speichern</button>
+        </div>
+      </div>
+      <div class="grid g3" style="margin-bottom:20px">
+        <div class="card stat"><b id="db-rank">–</b><span>Aktueller Rang</span></div>
+        <div class="card stat"><b id="db-flights">–</b><span>Absolvierte Flüge</span></div>
+        <div class="card stat"><b id="db-hours">–</b><span>Flugstunden</span></div>
+      </div>
+      <div class="card" style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <h3>Fortschritt zum nächsten Rang</h3>
+          <span class="hint" id="db-next-label"></span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="db-progress"></div></div>
+        <p class="hint" style="margin-top:8px" id="db-progress-text"></p>
+      </div>
+      <div class="grid g2">
+        <div class="card">
+          <h3 style="margin-bottom:10px">Freigeschaltete Flugzeuge</h3>
+          <div id="db-aircraft"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom:10px">Letzte Achievements</h3>
+          <div id="db-achievements"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SUBMIT -->
+    <section class="page" data-page="submit" hidden>
+      <div class="topbar">
+        <h1>Flug einreichen</h1>
+        <p>Füge deinen ATC24/PTFS-Flugplan ein oder trage den Flug manuell ein.</p>
+      </div>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-form="parse">Flugplan einfügen</button>
+        <button class="tab" role="tab" aria-selected="false" data-form="manual">Manuell eintragen</button>
+      </div>
+
+      <div class="form-panel" data-form="parse">
+        <div class="card">
+          <div class="field">
+            <label for="raw-plan">ATC24-Flugplan</label>
+            <textarea id="raw-plan" placeholder="Roblox: krithekh_disco&#10;Callsign: SAL 1426&#10;Aircraft: A350&#10;Flight Rules: IFR&#10;Departing: IPPH&#10;Arriving: IRFD&#10;Route: N/A&#10;Flight Level: 050"></textarea>
+            <span class="hint">Wird automatisch in einzelne Felder zerlegt – nichts wird ohne deine Prüfung abgeschickt.</span>
+          </div>
+          <button class="btn btn-line" id="btn-parse">Zerlegen</button>
+        </div>
+      </div>
+
+      <div class="form-panel" data-form="manual" hidden></div>
+
+      <div class="card" id="review-card" hidden style="margin-top:20px">
+        <h3 style="margin-bottom:16px">Flug überprüfen</h3>
+        <div class="grid g2" id="review-fields"></div>
+        <div class="field" style="margin-top:6px">
+          <label for="f-type">Streckentyp</label>
+          <select id="f-type">
+            <option value="short">Kurzstrecke (+100 XP)</option>
+            <option value="medium">Mittelstrecke (+200 XP)</option>
+            <option value="long">Langstrecke (+300 XP)</option>
+          </select>
+        </div>
+        <button class="btn btn-navy" id="btn-submit-flight">Zur Prüfung einreichen</button>
+      </div>
+    </section>
+
+    <!-- MEINE FLÜGE -->
+    <section class="page" data-page="flights" hidden>
+      <div class="topbar"><h1>Meine Flüge</h1><p>Alle eingereichten Flüge und ihr Status.</p></div>
+      <div class="card scrollx">
+        <table class="tbl">
+          <thead><tr><th>Flug</th><th>Aircraft</th><th>Route</th><th>Typ</th><th>Datum</th><th>Status</th></tr></thead>
+          <tbody id="flights-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- FLOTTE -->
+    <section class="page" data-page="fleet" hidden>
+      <div class="topbar"><h1>Flotte</h1><p>Freischaltung nach Rang und Training.</p></div>
+      <div class="grid g2" id="fleet-grid"></div>
+    </section>
+
+    <!-- TRAININGS -->
+    <section class="page" data-page="trainings" hidden>
+      <div class="topbar"><h1>Trainings</h1><p>Schließe Trainings ab, um Ränge und Flugzeuge freizuschalten.</p></div>
+      <div class="grid g3" id="trainings-grid"></div>
+    </section>
+
+    <!-- RÄNGE -->
+    <section class="page" data-page="ranks" hidden>
+      <div class="topbar"><h1>Ränge</h1><p>Dein Karriereweg bei Condor PTFS.</p></div>
+      <div class="card" id="ranks-list"></div>
+    </section>
+
+    <!-- ACHIEVEMENTS -->
+    <section class="page" data-page="achievements" hidden>
+      <div class="topbar"><h1>Achievements</h1><p>Auszeichnungen für Meilensteine.</p></div>
+      <div class="grid g2" id="ach-grid"></div>
+    </section>
+
+    <!-- COMMUNITY -->
+    <section class="page" data-page="community" hidden>
+      <div class="topbar"><h1>Community</h1><p>Piloten, Staff und Trainer bei Condor PTFS.</p></div>
+      <div class="filters" id="community-filters"></div>
+      <div class="card" id="community-list"></div>
+    </section>
+
+    <!-- NEWS -->
+    <section class="page" data-page="news" hidden>
+      <div class="topbar"><h1>News</h1><p>Ankündigungen rund um die Airline.</p></div>
+      <div class="card" id="news-form-card" hidden style="margin-bottom:20px">
+        <h3 style="margin-bottom:12px">News veröffentlichen</h3>
+        <div class="field"><label for="news-title">Titel</label><input id="news-title"></div>
+        <div class="field"><label for="news-text">Text</label><textarea id="news-text" style="min-height:90px;font-family:var(--body)"></textarea></div>
+        <button class="btn btn-navy" id="btn-post-news">Veröffentlichen</button>
+      </div>
+      <div class="card" id="news-list"></div>
+    </section>
+
+    <!-- ADMIN -->
+    <section class="page" data-page="admin" hidden>
+      <div class="topbar"><h1>Admin-Dashboard</h1><p>Flüge prüfen und die Airline verwalten.</p></div>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-admin="pending">Pending</button>
+        <button class="tab" role="tab" aria-selected="false" data-admin="accepted">Accepted</button>
+        <button class="tab" role="tab" aria-selected="false" data-admin="rejected">Rejected</button>
+        <button class="tab" role="tab" aria-selected="false" data-admin="members">Mitglieder</button>
+        <button class="tab" role="tab" aria-selected="false" data-admin="settings">Einstellungen</button>
+      </div>
+      <div class="card" id="reject-card" hidden style="margin-bottom:20px;border-color:var(--bad)">
+        <h3 style="margin-bottom:10px">Flug ablehnen</h3>
+        <div class="field"><label for="reject-reason">Grund</label><input id="reject-reason" placeholder="z. B. Aircraft nicht freigeschaltet"></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-bad" id="reject-confirm">Ablehnung bestätigen</button>
+          <button class="btn btn-line" id="reject-cancel">Abbrechen</button>
+        </div>
+      </div>
+      <div class="card scrollx" id="admin-panel"></div>
+      <div id="admin-settings" hidden></div>
+    </section>
+
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- API helper ---------- */
+async function api(path, opts){
+  opts = opts || {};
+  var res = await fetch("/api/"+path, Object.assign({headers:{"Content-Type":"application/json"}}, opts));
+  var data = null;
+  try{ data = await res.json(); }catch(e){}
+  if(!res.ok){ var err = new Error((data&&data.error)||("HTTP "+res.status)); err.status = res.status; err.data = data; throw err; }
+  return data;
+}
+function post(path, body){ return api(path, {method:"POST", body: JSON.stringify(body||{})}); }
+function put(path, body){ return api(path, {method:"PUT", body: JSON.stringify(body||{})}); }
+
+/* ---------- Local UI state (derived from server responses, never the source of truth) ---------- */
+var state = { user:null, isAdmin:false, effectiveRank:null, nextRank:null, unlockedAircraft:[], config:null, flights:[], news:[], community:[] };
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function fmtDate(d){ try{ return new Date(d).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});}catch(e){return d;} }
+function fmtDateTime(d){ try{ return new Date(d).toLocaleDateString("de-DE",{day:"2-digit",month:"2-digit",year:"numeric"});}catch(e){return d;} }
+function rankName(id){ var r=(state.config&&state.config.ranks||[]).find(function(x){return x.id===id}); return r?r.name:id; }
+function rankById(id){ return (state.config&&state.config.ranks||[]).find(function(x){return x.id===id}); }
+function rankIdx(id){ var arr=(state.config&&state.config.ranks)||[]; for(var i=0;i<arr.length;i++) if(arr[i].id===id) return i; return -1; }
+function trainingById(id){ return (state.config&&state.config.trainings||[]).find(function(x){return x.id===id}); }
+function aircraftById(id){ return (state.config&&state.config.aircraft||[]).find(function(x){return x.id===id}); }
+var TYPE_LABEL = {short:"Kurzstrecke", medium:"Mittelstrecke", long:"Langstrecke"};
+
+function toast(msg){
+  var wrap = document.getElementById("toasts");
+  var el = document.createElement("div");
+  el.className = "toast"; el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(function(){ el.remove(); }, 3800);
+}
+
+/* ---------- Router ---------- */
+var ROUTES = ["home","dashboard","submit","flights","fleet","trainings","ranks","achievements","community","news","admin"];
+var titles = {home:"Übersicht",dashboard:"Dashboard",submit:"Flug einreichen",flights:"Meine Flüge",fleet:"Flotte",
+  trainings:"Trainings",ranks:"Ränge",achievements:"Achievements",community:"Community",news:"News",admin:"Admin"};
+var communityFilter = "alle";
+var adminTab = "pending";
+
+function go(route){
+  if(!state.user) return;
+  if(route === "admin" && !state.isAdmin) route = "home";
+  ROUTES.forEach(function(r){
+    var sec = document.querySelector('.page[data-page="'+r+'"]');
+    if(sec) sec.hidden = (r!==route);
+  });
+  var active = document.querySelector('.page[data-page="'+route+'"]');
+  if(active){ active.classList.remove("enter"); void active.offsetWidth; active.classList.add("enter"); }
+  document.querySelectorAll(".sb-link[data-route]").forEach(function(l){
+    l.removeAttribute("aria-current");
+    if(l.dataset.route===route) l.setAttribute("aria-current","page");
+  });
+  document.title = "Condor PTFS · " + (titles[route]||"");
+  location.hash = "#/"+route;
+  closeSidebar();
+  render(route);
+  window.scrollTo(0,0);
+}
+function currentRoute(){
+  var h = location.hash.replace(/^#\//,"");
+  return ROUTES.indexOf(h)>=0 ? h : "home";
+}
+window.addEventListener("hashchange", function(){ if(state.user) go(currentRoute()); });
+
+/* ---------- Rendering ---------- */
+function renderSidebar(){
+  var u = state.user; if(!u) return;
+  document.getElementById("sb-avatar").textContent = u.discordUsername.slice(0,1).toUpperCase();
+  document.getElementById("sb-username").textContent = u.discordUsername;
+  document.getElementById("sb-rank").textContent = rankName(state.effectiveRank);
+  document.getElementById("nav-admin").hidden = !state.isAdmin;
+}
+
+function render(route){
+  if(route==="home") renderHome();
+  if(route==="dashboard") renderDashboard();
+  if(route==="flights") renderFlights();
+  if(route==="fleet") renderFleet();
+  if(route==="trainings") renderTrainings();
+  if(route==="ranks") renderRanks();
+  if(route==="achievements") renderAchievements();
+  if(route==="community") renderCommunity();
+  if(route==="news") renderNews();
+  if(route==="admin") renderAdmin();
+}
+
+async function renderHome(){
+  var u = state.user;
+  document.getElementById("home-greet").textContent = "Willkommen zurück, " + u.discordUsername + " 👋";
+  try{
+    var comm = await api("community");
+    state.community = comm.members;
+    var totalFlights = comm.members.reduce(function(s,p){return s+p.completedFlights;},0);
+    document.getElementById("stat-members").textContent = comm.members.length;
+    document.getElementById("stat-flights").textContent = totalFlights;
+  }catch(e){ document.getElementById("stat-members").textContent = "–"; document.getElementById("stat-flights").textContent = "–"; }
+  document.getElementById("stat-aircraft").textContent = state.unlockedAircraft.length + " / " + state.config.aircraft.length;
+  var completedTrainings = Object.keys(u.trainings).filter(function(k){return u.trainings[k]==="completed";}).length;
+  document.getElementById("stat-trainings").textContent = completedTrainings;
+
+  try{
+    var n = await api("news-list");
+    state.news = n.news;
+  }catch(e){}
+  var newsBox = document.getElementById("home-news");
+  newsBox.innerHTML = state.news.slice(0,2).map(function(n){
+    return '<div class="news-item"><time>'+fmtDate(n.date)+'</time><h4 style="margin:4px 0">'+esc(n.title)+'</h4><p class="hint">'+esc(n.text)+'</p></div>';
+  }).join("") || '<p class="hint">Noch keine News.</p>';
+
+  var act = document.getElementById("home-activity");
+  act.innerHTML = state.community.slice(0,4).map(function(p){
+    return '<div class="person"><span class="avatar" style="width:32px;height:32px;font-size:.85rem">'+esc(p.username.slice(0,1).toUpperCase())+'</span><span><b>'+esc(p.username)+'</b><span>'+rankName(p.rank)+' · '+p.completedFlights+' Flüge</span></span></div>';
+  }).join("");
+}
+
+function renderDashboard(){
+  var u = state.user;
+  document.getElementById("roblox-card").hidden = !!u.robloxUsername;
+  document.getElementById("db-rank").textContent = rankName(state.effectiveRank);
+  document.getElementById("db-flights").textContent = u.completedFlights;
+  document.getElementById("db-hours").textContent = u.flightHours.toFixed(1) + " h";
+
+  var nr = state.nextRank;
+  var track = document.getElementById("db-progress");
+  if(nr && !rankById(state.effectiveRank).staffOnly){
+    var pct = Math.min(100, Math.round((u.completedFlights/(nr.minFlights||1))*100));
+    document.getElementById("db-next-label").textContent = "Nächster Rang: " + nr.name;
+    document.getElementById("db-progress-text").textContent = u.completedFlights + " / " + nr.minFlights + " Flüge" + (nr.training ? " · Training „"+(trainingById(nr.training)||{}).name+"“ erforderlich" : "");
+    requestAnimationFrame(function(){ track.style.width = pct+"%"; });
+  } else {
+    document.getElementById("db-next-label").textContent = "Höchster erreichbarer Pilotenrang erreicht";
+    document.getElementById("db-progress-text").textContent = "Weitere Ränge werden von der Airline-Leitung per Discord-Rolle vergeben.";
+    requestAnimationFrame(function(){ track.style.width = "100%"; });
+  }
+
+  var unlocked = state.config.aircraft.filter(function(a){ return state.unlockedAircraft.indexOf(a.id)>=0; });
+  document.getElementById("db-aircraft").innerHTML = unlocked.map(function(a){
+    return '<div class="spec-row"><span>'+esc(a.name)+'</span><span class="badge badge-ok">Unlocked</span></div>';
+  }).join("") || '<p class="hint">Noch keine Flugzeuge freigeschaltet.</p>';
+
+  var achAll = window.__ACHIEVEMENTS_META || [];
+  var ach = achAll.filter(function(a){ return u.achievements.indexOf(a.id)>=0; });
+  document.getElementById("db-achievements").innerHTML = ach.slice(-4).reverse().map(function(a){
+    return '<div class="ach done" style="margin-bottom:12px"><span class="ach-icon"><svg><use href="#ic-trophy"/></svg></span><div><h4>'+esc(a.name)+'</h4><p>'+esc(a.desc)+'</p></div></div>';
+  }).join("") || '<p class="hint">Noch keine Achievements freigeschaltet.</p>';
+}
+
+/* ---------- ATC24 parser (client-side convenience only; server re-validates) ---------- */
+function parsePlan(text){
+  var map = {roblox:"roblox", callsign:"callsign", aircraft:"aircraft",
+    "flight rules":"rules", departing:"dep", arriving:"arr", route:"route", "flight level":"fl"};
+  var out = {};
+  text.split(/\n/).forEach(function(line){
+    var m = line.match(/^\s*([A-Za-zÄÖÜäöüß ]+?)\s*:\s*(.+?)\s*$/);
+    if(!m) return;
+    var key = m[1].toLowerCase().trim();
+    if(map[key]) out[map[key]] = m[2].trim();
+  });
+  return out;
+}
+
+function reviewState(){ return window.__review || null; }
+function showReview(data){
+  window.__review = data;
+  var box = document.getElementById("review-fields");
+  var fields = [
+    ["Roblox-Username","roblox"], ["Callsign","callsign"], ["Aircraft","aircraft"],
+    ["Flight Rules","rules"], ["Departure","dep"], ["Arrival","arr"], ["Route","route"], ["Flight Level","fl"]
+  ];
+  box.innerHTML = fields.map(function(f){
+    var val = data[f[1]] || "";
+    return '<div class="field"><label>'+f[0]+'</label><input data-key="'+f[1]+'" value="'+esc(val)+'"></div>';
+  }).join("");
+  document.getElementById("review-card").hidden = false;
+  document.getElementById("review-card").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function buildManualForm(){
+  var panel = document.querySelector('.form-panel[data-form="manual"]');
+  panel.innerHTML =
+    '<div class="card">'+
+    '<div class="grid g2">'+
+    '<div class="field"><label>Callsign</label><input id="m-callsign" placeholder="DE1426"></div>'+
+    '<div class="field"><label>Aircraft</label><select id="m-aircraft">'+state.config.aircraft.map(function(a){return '<option value="'+esc(a.name)+'">'+esc(a.name)+'</option>';}).join("")+'</select></div>'+
+    '<div class="field"><label>Flight Rules</label><select id="m-rules"><option>IFR</option><option>VFR</option></select></div>'+
+    '<div class="field"><label>Flight Level</label><input id="m-fl" placeholder="FL050"></div>'+
+    '<div class="field"><label>Departure (ICAO)</label><input id="m-dep" placeholder="EDDH"></div>'+
+    '<div class="field"><label>Arrival (ICAO)</label><input id="m-arr" placeholder="EDDL"></div>'+
+    '</div>'+
+    '<div class="field"><label>Route (optional)</label><input id="m-route"></div>'+
+    '<button class="btn btn-line" id="btn-manual-continue">Weiter zur Prüfung</button>'+
+    '</div>';
+  document.getElementById("btn-manual-continue").addEventListener("click", function(){
+    showReview({
+      roblox: state.user.robloxUsername || state.user.discordUsername,
+      callsign: document.getElementById("m-callsign").value,
+      aircraft: document.getElementById("m-aircraft").value,
+      rules: document.getElementById("m-rules").value,
+      dep: document.getElementById("m-dep").value,
+      arr: document.getElementById("m-arr").value,
+      route: document.getElementById("m-route").value,
+      fl: document.getElementById("m-fl").value
+    });
+  });
+}
+
+async function renderFlights(){
+  var body = document.getElementById("flights-body");
+  body.innerHTML = '<tr><td colspan="6" class="hint">Lädt…</td></tr>';
+  try{
+    var r = await api("flights-mine");
+    state.flights = r.flights;
+  }catch(e){ body.innerHTML = '<tr><td colspan="6" class="hint">Konnte Flüge nicht laden.</td></tr>'; return; }
+  if(!state.flights.length){ body.innerHTML = '<tr><td colspan="6" class="hint">Noch keine Flüge eingereicht.</td></tr>'; return; }
+  body.innerHTML = state.flights.map(function(f){
+    return '<tr><td class="cs">'+esc(f.callsign||"–")+'</td><td>'+esc(f.aircraft||"–")+'</td><td>'+esc((f.dep||"?")+" → "+(f.arr||"?"))+'</td>'+
+      '<td>'+(TYPE_LABEL[f.type]||f.type)+'</td><td>'+fmtDate(f.submittedAt)+'</td><td>'+statusBadge(f)+'</td></tr>';
+  }).join("");
+}
+function statusBadge(f){
+  if(f.status==="pending") return '<span class="badge badge-warn">Pending</span>';
+  if(f.status==="accepted") return '<span class="badge badge-ok">Accepted</span>';
+  return '<span class="badge badge-bad" title="'+esc(f.reason||"")+'">Rejected</span>';
+}
+
+function renderFleet(){
+  document.getElementById("fleet-grid").innerHTML = state.config.aircraft.map(function(a){
+    var ok = state.unlockedAircraft.indexOf(a.id)>=0;
+    var train = a.reqTraining ? trainingById(a.reqTraining) : null;
+    return '<div class="card plane-card">'+
+      '<div class="top"><div><h3>'+esc(a.name)+'</h3><span class="maker">'+esc(a.maker)+'</span></div>'+
+      (ok?'<span class="badge badge-ok">Unlocked</span>':'<span class="badge badge-lock">🔒 Locked</span>')+'</div>'+
+      '<p class="hint">'+esc(a.desc)+'</p>'+
+      '<div class="spec-row"><span>Kategorie</span><span>'+esc(a.cat)+'</span></div>'+
+      '<div class="spec-row"><span>Erforderlicher Rang</span><span>'+rankName(a.reqRank)+'</span></div>'+
+      '<div class="spec-row"><span>Erforderliches Training</span><span>'+(train?esc(train.name):"–")+'</span></div>'+
+      '</div>';
+  }).join("");
+}
+
+function renderTrainings(){
+  var u = state.user;
+  document.getElementById("trainings-grid").innerHTML = state.config.trainings.map(function(t){
+    var st = u.trainings[t.id] || "locked";
+    var badge = st==="completed" ? '<span class="badge badge-ok">Completed</span>' :
+      st==="available" ? '<span class="badge badge-warn">Verfügbar</span>' : '<span class="badge badge-lock">🔒 Locked</span>';
+    var btn = "";
+    if(state.isAdmin && st==="available") btn = '<button class="btn btn-navy btn-sm" data-complete-training="'+t.id+'" data-user="'+u.discordId+'" style="margin-top:10px">Für mich abschließen</button>';
+    return '<div class="card train-card"><div style="display:flex;justify-content:space-between;gap:8px"><h3>'+esc(t.name)+'</h3>'+badge+'</div>'+
+      '<p>'+esc(t.desc)+'</p><p class="hint">Rang-Voraussetzung: '+rankName(t.reqRank)+' · +'+t.xp+' XP</p>'+btn+'</div>';
+  }).join("");
+}
+
+function renderRanks(){
+  document.getElementById("ranks-list").innerHTML = state.config.ranks.map(function(r,i){
+    var isCurrent = r.id===state.effectiveRank;
+    return '<div class="rank-row'+(isCurrent?" current":"")+'"><span class="rank-num">'+(i+1)+'</span>'+
+      '<div><h4>'+esc(r.name)+(isCurrent?'  <span class="badge badge-rank">Dein Rang</span>':'')+'</h4><p>'+esc(r.note)+'</p></div></div>';
+  }).join("");
+}
+
+function renderAchievements(){
+  var u = state.user;
+  var all = window.__ACHIEVEMENTS_META || [];
+  document.getElementById("ach-grid").innerHTML = all.map(function(a){
+    var done = u.achievements.indexOf(a.id)>=0;
+    return '<div class="card ach'+(done?" done":"")+'"><span class="ach-icon"><svg><use href="#ic-trophy"/></svg></span>'+
+      '<div><h4>'+esc(a.name)+(done?' <span class="badge badge-ok">Freigeschaltet</span>':'')+'</h4><p>'+esc(a.desc)+'</p></div></div>';
+  }).join("");
+}
+
+async function renderCommunity(){
+  var box = document.getElementById("community-list");
+  box.innerHTML = '<p class="hint">Lädt…</p>';
+  try{
+    var r = await api("community");
+    state.community = r.members;
+  }catch(e){ box.innerHTML = '<p class="hint">Konnte Community nicht laden.</p>'; return; }
+  var filters = [["alle","Alle"],["staff","Staff / Instructor"],["pilot","Piloten"]];
+  document.getElementById("community-filters").innerHTML = filters.map(function(f){
+    return '<button class="chip" data-cf="'+f[0]+'" aria-pressed="'+(communityFilter===f[0])+'">'+f[1]+'</button>';
+  }).join("");
+  var list = state.community.filter(function(p){
+    if(communityFilter==="alle") return true;
+    var isStaff = rankById(p.rank) && rankById(p.rank).staffOnly;
+    return communityFilter==="staff" ? isStaff : !isStaff;
+  });
+  box.innerHTML = list.map(function(p){
+    return '<div class="person"><span class="avatar">'+esc(p.username.slice(0,1).toUpperCase())+'</span>'+
+      '<span><b>'+esc(p.username)+(p.discordId===state.user.discordId?' (du)':'')+'</b><span>'+rankName(p.rank)+' · '+p.completedFlights+' Flüge</span></span></div>';
+  }).join("") || '<p class="hint">Keine Mitglieder in dieser Ansicht.</p>';
+}
+
+function renderNews(){
+  document.getElementById("news-form-card").hidden = !state.isAdmin;
+  var list = state.news.slice();
+  document.getElementById("news-list").innerHTML = list.map(function(n){
+    return '<div class="news-item"><time>'+fmtDate(n.date)+' · '+esc(n.author)+'</time><h3>'+esc(n.title)+'</h3><p>'+esc(n.text)+'</p></div>';
+  }).join("") || '<p class="hint">Noch keine News.</p>';
+}
+
+async function renderAdmin(){
+  if(!state.isAdmin) return;
+  var box = document.getElementById("admin-panel");
+  box.style.display = "";
+  document.getElementById("admin-settings").hidden = adminTab!=="settings";
+  box.hidden = adminTab==="settings";
+  if(adminTab==="settings"){ renderAdminSettings(); return; }
+
+  if(adminTab==="members"){
+    box.innerHTML = '<p class="hint">Lädt…</p>';
+    var r = await api("admin-users");
+    box.innerHTML = '<table class="tbl"><thead><tr><th>Discord</th><th>Roblox</th><th>Rang</th><th>Flüge</th><th></th></tr></thead><tbody>'+
+      r.users.map(function(p){
+        var eff = p.discordRank && rankById(p.discordRank) ? p.discordRank : p.progressionRank;
+        var rankOptions = state.config.ranks.filter(function(rk){return !rk.staffOnly;}).map(function(rk){
+          return '<option value="'+rk.id+'"'+(rk.id===p.progressionRank?' selected':'')+'>'+esc(rk.name)+'</option>';
+        }).join("");
+        return '<tr><td>'+esc(p.discordUsername)+(p.banned?' <span class="badge badge-bad">Gesperrt</span>':'')+'</td>'+
+          '<td>'+esc(p.robloxUsername||"–")+'</td>'+
+          '<td>'+rankName(eff)+(p.discordRank?' <span class="hint">(Discord)</span>':'')+'</td>'+
+          '<td>'+p.completedFlights+'</td>'+
+          '<td style="display:flex;gap:6px;flex-wrap:wrap">'+
+            '<select class="btn-sm" data-set-rank="'+p.discordId+'" style="border-radius:8px;border:1.5px solid var(--line);padding:0 8px">'+rankOptions+'</select>'+
+            '<button class="btn btn-line btn-sm" data-toggle-ban="'+p.discordId+'" data-banned="'+(!p.banned)+'">'+(p.banned?"Entsperren":"Sperren")+'</button>'+
+          '</td></tr>';
+      }).join("")+'</tbody></table>';
+    return;
+  }
+
+  box.innerHTML = '<p class="hint">Lädt…</p>';
+  var res = await api("flights-review?status="+adminTab);
+  var list = res.flights;
+  if(!list.length){ box.innerHTML = '<p class="hint">Keine Flüge in dieser Kategorie.</p>'; return; }
+  box.innerHTML = '<table class="tbl"><thead><tr><th>Pilot</th><th>Callsign</th><th>Aircraft</th><th>Route</th><th>Datum</th>'+(adminTab==="pending"?'<th>Aktion</th>':'<th>Status</th>')+'</tr></thead><tbody>'+
+    list.map(function(f){
+      var action = adminTab==="pending" ?
+        '<div style="display:flex;gap:8px"><button class="btn btn-ok btn-sm" data-accept="'+f.id+'">Accept</button><button class="btn btn-bad btn-sm" data-reject="'+f.id+'">Reject</button></div>' :
+        statusBadge(f);
+      return '<tr><td>'+esc(f.pilotName)+'</td><td class="cs">'+esc(f.callsign||"–")+'</td><td>'+esc(f.aircraft||"–")+'</td><td>'+esc((f.dep||"?")+" → "+(f.arr||"?"))+'</td><td>'+fmtDate(f.submittedAt)+'</td><td>'+action+'</td></tr>';
+    }).join("")+'</tbody></table>';
+}
+
+function renderAdminSettings(){
+  var box = document.getElementById("admin-settings");
+  var cfg = state.config;
+  box.innerHTML =
+    '<div class="card" style="margin-bottom:18px">'+
+    '<h3 style="margin-bottom:12px">Discord-Rollen-Zuordnung</h3>'+
+    '<p class="hint" style="margin-bottom:12px">Ordne Discord-Rollen-IDs internen Rängen zu (z. B. deine "Staff"-Rolle → Staff). Wer diese Discord-Rolle hat, bekommt automatisch diesen Rang, unabhängig vom Flug-Fortschritt.</p>'+
+    '<div id="role-map-rows"></div>'+
+    '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'+
+      '<input id="rm-role-id" placeholder="Discord-Rollen-ID" style="flex:1;min-width:180px;padding:9px 12px;border-radius:8px;border:1.5px solid var(--line)">'+
+      '<select id="rm-rank" style="padding:9px 12px;border-radius:8px;border:1.5px solid var(--line)">'+cfg.ranks.map(function(r){return '<option value="'+r.id+'">'+esc(r.name)+'</option>';}).join("")+'</select>'+
+      '<button class="btn btn-line btn-sm" id="btn-add-role-map">Hinzufügen</button>'+
+    '</div>'+
+    '<button class="btn btn-navy" id="btn-save-role-map" style="margin-top:14px">Zuordnung speichern</button>'+
+    '</div>'+
+    '<div class="card" style="margin-bottom:18px">'+
+    '<h3 style="margin-bottom:12px">XP & Flugstunden pro Streckentyp</h3>'+
+    '<div class="grid g3">'+
+      ["short","medium","long"].map(function(k){
+        return '<div class="field"><label>'+TYPE_LABEL[k]+' XP</label><input type="number" id="xp-'+k+'" value="'+cfg.xpPerType[k]+'"></div>';
+      }).join("")+
+    '</div>'+
+    '<div class="grid g3">'+
+      ["short","medium","long"].map(function(k){
+        return '<div class="field"><label>'+TYPE_LABEL[k]+' Stunden</label><input type="number" step="0.1" id="hrs-'+k+'" value="'+cfg.hoursPerType[k]+'"></div>';
+      }).join("")+
+    '</div>'+
+    '<button class="btn btn-navy" id="btn-save-xp">Speichern</button>'+
+    '</div>'+
+    '<div class="card">'+
+    '<h3 style="margin-bottom:8px">Erweitert: Ränge / Flotte / Trainings als JSON</h3>'+
+    '<p class="hint" style="margin-bottom:10px">Für alles, was über einzelne Felder hinausgeht (neue Ränge, neue Flugzeuge, neue Trainings hinzufügen). Vorsicht beim Bearbeiten – ungültiges JSON wird abgelehnt.</p>'+
+    '<div class="field"><label>ranks</label><textarea id="json-ranks">'+esc(JSON.stringify(cfg.ranks,null,2))+'</textarea></div>'+
+    '<div class="field"><label>aircraft</label><textarea id="json-aircraft">'+esc(JSON.stringify(cfg.aircraft,null,2))+'</textarea></div>'+
+    '<div class="field"><label>trainings</label><textarea id="json-trainings">'+esc(JSON.stringify(cfg.trainings,null,2))+'</textarea></div>'+
+    '<button class="btn btn-navy" id="btn-save-json">JSON speichern</button>'+
+    '</div>';
+
+  var roleRows = document.getElementById("role-map-rows");
+  function drawRoleRows(){
+    var entries = Object.keys(cfg.discordRoleMap||{});
+    roleRows.innerHTML = entries.length ? entries.map(function(rid){
+      return '<div class="spec-row"><span>'+esc(rid)+'</span><span>'+rankName(cfg.discordRoleMap[rid])+
+        ' <button class="btn btn-bad btn-sm" data-remove-role-map="'+esc(rid)+'" style="margin-left:8px">Entfernen</button></span></div>';
+    }).join("") : '<p class="hint">Noch keine Zuordnung.</p>';
+  }
+  drawRoleRows();
+  roleRows.addEventListener("click", function(e){
+    var b = e.target.closest("[data-remove-role-map]"); if(!b) return;
+    delete cfg.discordRoleMap[b.dataset.removeRoleMap];
+    drawRoleRows();
+  });
+  document.getElementById("btn-add-role-map").addEventListener("click", function(){
+    var id = document.getElementById("rm-role-id").value.trim();
+    var rank = document.getElementById("rm-rank").value;
+    if(!id) return;
+    cfg.discordRoleMap[id] = rank;
+    document.getElementById("rm-role-id").value = "";
+    drawRoleRows();
+  });
+  document.getElementById("btn-save-role-map").addEventListener("click", async function(){
+    try{ await put("config-update", {discordRoleMap: cfg.discordRoleMap}); toast("Rollen-Zuordnung gespeichert"); }
+    catch(e){ toast("Fehler: "+e.message); }
+  });
+  document.getElementById("btn-save-xp").addEventListener("click", async function(){
+    var xpPerType = {short:+document.getElementById("xp-short").value, medium:+document.getElementById("xp-medium").value, long:+document.getElementById("xp-long").value};
+    var hoursPerType = {short:+document.getElementById("hrs-short").value, medium:+document.getElementById("hrs-medium").value, long:+document.getElementById("hrs-long").value};
+    try{ var r = await put("config-update", {xpPerType:xpPerType, hoursPerType:hoursPerType}); state.config = r.config; toast("XP-Werte gespeichert"); }
+    catch(e){ toast("Fehler: "+e.message); }
+  });
+  document.getElementById("btn-save-json").addEventListener("click", async function(){
+    try{
+      var ranks = JSON.parse(document.getElementById("json-ranks").value);
+      var aircraft = JSON.parse(document.getElementById("json-aircraft").value);
+      var trainings = JSON.parse(document.getElementById("json-trainings").value);
+      var r = await put("config-update", {ranks:ranks, aircraft:aircraft, trainings:trainings});
+      state.config = r.config;
+      toast("Konfiguration gespeichert");
+      renderAdminSettings();
+    }catch(e){ toast("Ungültiges JSON oder Fehler: "+e.message); }
+  });
+}
+
+/* ---------- Actions ---------- */
+async function acceptFlight(id){
+  try{
+    var r = await post("flights-review", {id:id, action:"accept"});
+    toast("Flug "+esc(r.flight.callsign)+" akzeptiert");
+    if(r.achievementsGained) r.achievementsGained.forEach(function(g){ toast("Achievement freigeschaltet: "+g+" 🏅"); });
+    if(state.user && r.pilot && r.pilot.discordId===state.user.discordId){ await refreshMe(); renderSidebar(); }
+    renderAdmin();
+  }catch(e){ toast("Fehler: "+e.message); }
+}
+async function rejectFlight(id, reason){
+  try{
+    var r = await post("flights-review", {id:id, action:"reject", reason:reason});
+    toast("Flug "+esc(r.flight.callsign)+" abgelehnt");
+    renderAdmin();
+  }catch(e){ toast("Fehler: "+e.message); }
+}
+async function completeTraining(trainingId, userId){
+  try{
+    var r = await post("trainings-complete", {userId:userId, trainingId:trainingId});
+    toast("Training abgeschlossen");
+    if(r.achievementsGained) r.achievementsGained.forEach(function(g){ toast("Achievement freigeschaltet: "+g+" 🏅"); });
+    if(state.user && userId===state.user.discordId){ await refreshMe(); renderSidebar(); }
+    renderTrainings();
+  }catch(e){ toast("Fehler: "+e.message); }
+}
+
+/* ---------- Bootstrap / session ---------- */
+async function refreshMe(){
+  var m = await api("me");
+  state.user = m.user; state.isAdmin = m.isAdmin; state.effectiveRank = m.effectiveRank;
+  state.nextRank = m.nextRank; state.unlockedAircraft = m.unlockedAircraft; state.config = m.config;
+  return m;
+}
+
+function enterApp(){
+  document.getElementById("login").style.display = "none";
+  document.getElementById("app").classList.add("on");
+  renderSidebar();
+  go(currentRoute()==="admin" && !state.isAdmin ? "home" : currentRoute());
+}
+
+async function boot(){
+  try{
+    await refreshMe();
+    buildManualForm();
+    enterApp();
+  }catch(e){
+    document.getElementById("login").style.display = "grid";
+    document.getElementById("app").classList.remove("on");
+  }
+}
+
+/* ---------- Wire up ---------- */
+document.getElementById("btn-sync-roles").addEventListener("click", async function(){
+  try{
+    var r = await post("sync-roles");
+    toast("Rollen synchronisiert – Rang: "+rankName(r.user.discordRank && rankById(r.user.discordRank)?r.user.discordRank:r.user.progressionRank));
+    await refreshMe(); renderSidebar(); render(currentRoute());
+  }catch(e){ toast("Fehler: "+e.message); }
+});
+
+document.getElementById("btn-save-roblox").addEventListener("click", async function(){
+  var val = document.getElementById("roblox-input").value.trim();
+  if(!val){ toast("Bitte Roblox-Username eingeben."); return; }
+  try{
+    await post("profile-update", {robloxUsername: val});
+    await refreshMe();
+    toast("Roblox-Username gespeichert");
+    renderDashboard();
+  }catch(e){ toast("Fehler: "+e.message); }
+});
+
+document.getElementById("sb-nav").addEventListener("click", function(e){
+  var b = e.target.closest("[data-route]"); if(b) go(b.dataset.route);
+});
+document.body.addEventListener("click", function(e){
+  var b = e.target.closest("[data-route]");
+  if(b && !b.closest("#sb-nav")) go(b.dataset.route);
+});
+
+document.querySelectorAll('.tabs [role="tab"][data-form]').forEach(function(t){
+  t.addEventListener("click", function(){
+    document.querySelectorAll('.tabs [data-form]').forEach(function(x){ x.setAttribute("aria-selected","false"); });
+    t.setAttribute("aria-selected","true");
+    document.querySelectorAll(".form-panel").forEach(function(p){ p.hidden = p.dataset.form!==t.dataset.form; });
+    document.getElementById("review-card").hidden = true;
+  });
+});
+
+document.getElementById("btn-parse").addEventListener("click", function(){
+  var text = document.getElementById("raw-plan").value;
+  if(!text.trim()){ toast("Bitte zuerst einen Flugplan einfügen."); return; }
+  var data = parsePlan(text);
+  showReview(data);
+});
+
+document.getElementById("review-card").addEventListener("input", function(e){
+  var inp = e.target.closest("input[data-key]");
+  if(!inp) return;
+  var rev = reviewState(); if(rev) rev[inp.dataset.key] = inp.value;
+});
+document.getElementById("btn-submit-flight").addEventListener("click", async function(){
+  var rev = reviewState(); if(!rev) return;
+  var body = {
+    callsign: rev.callsign||"", aircraft: rev.aircraft||"", rules: rev.rules||"",
+    dep: rev.dep||"", arr: rev.arr||"", route: rev.route||"", fl: rev.fl||"",
+    type: document.getElementById("f-type").value
+  };
+  try{
+    await post("flights-submit", body);
+    document.getElementById("review-card").hidden = true;
+    document.getElementById("raw-plan").value = "";
+    toast("Flug eingereicht – Status: Pending");
+    go("flights");
+  }catch(e){ toast("Fehler beim Einreichen: "+e.message); }
+});
+
+document.getElementById("community-filters").addEventListener("click", function(e){
+  var c = e.target.closest("[data-cf]"); if(!c) return;
+  communityFilter = c.dataset.cf; renderCommunity();
+});
+
+document.getElementById("btn-post-news").addEventListener("click", async function(){
+  var title = document.getElementById("news-title").value.trim();
+  var text = document.getElementById("news-text").value.trim();
+  if(!title || !text){ toast("Bitte Titel und Text ausfüllen."); return; }
+  try{
+    await post("news-create", {title:title, text:text});
+    document.getElementById("news-title").value = ""; document.getElementById("news-text").value = "";
+    var n = await api("news-list"); state.news = n.news;
+    renderNews(); toast("News veröffentlicht");
+  }catch(e){ toast("Fehler: "+e.message); }
+});
+
+document.querySelectorAll('.tabs [data-admin]').forEach(function(t){
+  t.addEventListener("click", function(){
+    document.querySelectorAll('[data-admin]').forEach(function(x){ x.setAttribute("aria-selected","false"); });
+    t.setAttribute("aria-selected","true");
+    adminTab = t.dataset.admin; renderAdmin();
+  });
+});
+var pendingRejectId = null;
+document.getElementById("admin-panel").addEventListener("click", function(e){
+  var acc = e.target.closest("[data-accept]");
+  var rej = e.target.closest("[data-reject]");
+  var ban = e.target.closest("[data-toggle-ban]");
+  if(acc) acceptFlight(acc.dataset.accept);
+  if(rej){
+    pendingRejectId = rej.dataset.reject;
+    document.getElementById("reject-reason").value = "";
+    document.getElementById("reject-card").hidden = false;
+    document.getElementById("reject-card").scrollIntoView({behavior:"smooth", block:"start"});
+  }
+  if(ban){
+    post("admin-users", {action:"ban", userId: ban.dataset.toggleBan, banned: ban.dataset.banned==="true"})
+      .then(function(){ toast("Aktualisiert"); renderAdmin(); })
+      .catch(function(e){ toast("Fehler: "+e.message); });
+  }
+});
+document.getElementById("admin-panel").addEventListener("change", function(e){
+  var sel = e.target.closest("[data-set-rank]"); if(!sel) return;
+  post("admin-users", {action:"setRank", userId: sel.dataset.setRank, rankId: sel.value})
+    .then(function(){ toast("Rang gesetzt"); renderAdmin(); })
+    .catch(function(e){ toast("Fehler: "+e.message); });
+});
+document.getElementById("reject-cancel").addEventListener("click", function(){
+  pendingRejectId = null; document.getElementById("reject-card").hidden = true;
+});
+document.getElementById("reject-confirm").addEventListener("click", function(){
+  if(!pendingRejectId) return;
+  var reason = document.getElementById("reject-reason").value.trim() || "Kein Grund angegeben";
+  rejectFlight(pendingRejectId, reason);
+  pendingRejectId = null; document.getElementById("reject-card").hidden = true;
+});
+document.getElementById("trainings-grid").addEventListener("click", function(e){
+  var b = e.target.closest("[data-complete-training]"); if(b) completeTraining(b.dataset.completeTraining, b.dataset.user);
+});
+
+/* Sidebar mobile */
+var sidebar = document.getElementById("sidebar"), scrim = document.getElementById("scrim"), menuBtn = document.getElementById("menu-btn");
+function openSidebar(){ sidebar.classList.add("open"); scrim.classList.add("show"); menuBtn.setAttribute("aria-expanded","true"); }
+function closeSidebar(){ sidebar.classList.remove("open"); scrim.classList.remove("show"); menuBtn.setAttribute("aria-expanded","false"); }
+menuBtn.addEventListener("click", function(){ sidebar.classList.contains("open") ? closeSidebar() : openSidebar(); });
+scrim.addEventListener("click", closeSidebar);
+
+window.__ACHIEVEMENTS_META = [
+  {id:"first", name:"First Flight", desc:"Absolviere deinen ersten Flug."},
+  {id:"ten", name:"10 Flights", desc:"Absolviere 10 Flüge."},
+  {id:"fifty", name:"50 Flights", desc:"Absolviere 50 Flüge."},
+  {id:"a330q", name:"A330 Qualified", desc:"Schließe das A330 Training ab."},
+  {id:"captain", name:"Captain", desc:"Erreiche den Captain-Rang."}
+];
+
+boot();
+})();
+</script>
+</body>
+</html>

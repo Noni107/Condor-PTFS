@@ -1,0 +1,27 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Clean API paths -> the actual function files
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/auth/discord/start"
+  to = "/.netlify/functions/auth-start"
+  status = 200
+
+[[redirects]]
+  from = "/auth/discord/callback"
+  to = "/.netlify/functions/auth-callback"
+  status = 200
+
+[[redirects]]
+  from = "/auth/logout"
+  to = "/.netlify/functions/logout"
+  status = 200

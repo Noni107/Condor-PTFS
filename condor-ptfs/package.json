@@ -1,0 +1,10 @@
+{
+  "name": "condor-ptfs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Condor PTFS Airline Management System backend (Netlify Functions + Netlify Blobs)",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
