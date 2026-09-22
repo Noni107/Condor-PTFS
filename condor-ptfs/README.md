@@ -104,4 +104,4 @@ netlify dev
 Discord-Logins brauchst du trotzdem eine echte Netlify-Site-Verknüpfung
 (`netlify link`) und die Environment-Variablen lokal (`netlify env:pull`).
 
-Token:MTU1MTgyODIzOTkyMjQ5NTQ5OA.GJjnRK.ffbuIAZOmt3Kv3GSxXJo9xtoyIP4WFjviyRaN8
+
