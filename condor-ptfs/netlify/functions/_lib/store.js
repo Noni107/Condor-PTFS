@@ -4,7 +4,12 @@
 const { getStore } = require("@netlify/blobs");
 
 function store() {
-  return getStore({ name: "condor-ptfs", consistency: "strong" });
+  const opts = { name: "condor-ptfs", consistency: "strong" };
+  if (process.env.BLOBS_SITE_ID && process.env.BLOBS_TOKEN) {
+    opts.siteID = process.env.BLOBS_SITE_ID;
+    opts.token = process.env.BLOBS_TOKEN;
+  }
+  return getStore(opts);
 }
 
 async function getJSON(key, fallback) {
